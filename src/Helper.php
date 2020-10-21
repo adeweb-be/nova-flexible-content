@@ -17,12 +17,18 @@ function deleteFile(NovaRequest $request, $model, $field)
     $path[] = $field->attribute;
     $mainField = array_shift($path);
 
-    $data = json_decode($model->{$mainField});
-
+    $data = $model->{$mainField};
+    if(!is_array($data)){
+        $data = json_decode($model->{$mainField});
+    }
     $current = $data;
     foreach ($path as $i => $subpath) {
         if ($i === array_key_last($path))
-            $current->attributes->{$subpath} = "";
+            if(is_object($current)){
+                $current->attributes->{$subpath} = "";
+            } else {
+                $current["attributes"][$subpath] = "";
+            }
         elseif (is_array($current) && isset($current[$subpath])) {
             $current = $current[$subpath];
         } elseif (is_object($current) && isset($current->{$subpath})) {
@@ -31,10 +37,13 @@ function deleteFile(NovaRequest $request, $model, $field)
             abort(404);
         }
     };
+    if(!is_array($model->{$mainField})){
+        $model->{$mainField} = json_encode($data);
+    } else {
+        $model->{$mainField} = $data;
+    }
     $model->{$mainField} = json_encode($data);
     $model->timestamps = false;
     $model->save();
-    $model->timestamps = true;
-
     return true;
 }
